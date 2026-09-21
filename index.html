@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Anatomi Rangka Manusia - 206 Tulang Interaktif</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <!-- ==========================================
+       LAYAR LOADING ASET 3D OFFLINE
+       ========================================== -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-icon">🦴</div>
+    <div class="loading-title">3D Anatomi Rangka Manusia</div>
+    <div class="loading-bar-container">
+      <div id="loading-bar-fill" class="loading-bar-fill"></div>
+    </div>
+    <div id="loading-text" class="loading-text">Menyiapkan model 3D anatomi...</div>
+  </div>
+
+  <!-- ==========================================
+       HEADER APLIKASI
+       ========================================== -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-icon">💀</div>
+      <div>
+        <h1 class="brand-title">3D ANATOMI RANGKA MANUSIA</h1>
+        <p class="brand-subtitle">Media Pembelajaran Interaktif 206 Tulang (Aksial & Apendikular)</p>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="learned-badge">
+        <span>📖 Progres:</span>
+        <strong id="learned-counter-badge">0 / 45 Jenis (206 Tulang)</strong>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="mode-btn quiz-btn" onclick="openQuizSelection()">
+        <span>🎯 Mode Kuis</span>
+      </button>
+      <button class="icon-btn" onclick="openHelpModal()" title="Petunjuk Penggunaan">
+        <span>❓</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==========================================
+       WORKSPACE UTAMA (SIDEBAR KIRI, 3D, KANAN)
+       ========================================== -->
+  <main class="main-workspace">
+
+    <!-- PANEL KIRI: DAFTAR 206 TULANG & PENCARIAN -->
+    <aside class="left-panel">
+      <div class="panel-header">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="bone-search-input" placeholder="Cari tulang (Indonesia / Latin)...">
+        </div>
+        <div class="category-tabs">
+          <button class="cat-tab-btn active" data-cat="all">Semua (206)</button>
+          <button class="cat-tab-btn" data-cat="Aksial">Aksial (80)</button>
+          <button class="cat-tab-btn" data-cat="Apendikular">Apendikular (126)</button>
+        </div>
+      </div>
+
+      <div id="bone-list-container" class="bone-list">
+        <!-- Item tulang dirender secara dinamis oleh app.js -->
+      </div>
+      <div id="bone-list-empty" class="list-empty-state hidden">
+        Tidak ada tulang yang cocok dengan pencarian.
+      </div>
+    </aside>
+
+    <!-- AREA TENGAH: VIEWPORT 3D WEBGL -->
+    <section class="viewport-3d">
+      <div id="webgl-container"></div>
+
+      <!-- Petunjuk Kontrol Navigasi -->
+      <div class="controls-hint-pill">
+        <span>🖱️ <strong>Klik Kiri + Geser:</strong> Putar 360°</span>
+        <span>🖱️ <strong>Klik Kanan + Geser:</strong> Geser Kamera</span>
+        <span>🔍 <strong>Roda Mouse:</strong> Zoom</span>
+        <span>👆 <strong>Klik Tulang:</strong> Tampilkan Detail</span>
+      </div>
+
+      <!-- Tooltip Nama Tulang saat Hover -->
+      <div id="quick-tooltip" class="quick-tooltip">Tulang</div>
+
+      <!-- Bilah Alat Tombol Sudut Pandang Cepat -->
+      <div class="view-presets-toolbar">
+        <button class="preset-btn" onclick="window.anatomyApp.setPresetView('front')" title="Tampak Depan">Depan</button>
+        <button class="preset-btn" onclick="window.anatomyApp.setPresetView('back')" title="Tampak Belakang">Belakang</button>
+        <button class="preset-btn" onclick="window.anatomyApp.setPresetView('right')" title="Tampak Kanan">Kanan</button>
+        <button class="preset-btn" onclick="window.anatomyApp.setPresetView('left')" title="Tampak Kiri">Kiri</button>
+        <button class="preset-btn" onclick="window.anatomyApp.setPresetView('head')" title="Fokus Tengkorak">Tengkorak</button>
+        <button class="preset-btn" onclick="window.anatomyApp.setPresetView('thorax')" title="Fokus Dada & Rusuk">Dada</button>
+        <button class="preset-btn" onclick="window.anatomyApp.setPresetView('legs')" title="Fokus Kaki">Kaki</button>
+        <button class="preset-btn reset-btn" onclick="window.anatomyApp.setPresetView('reset')" title="Reset Posisi Normal">↺ Reset</button>
+      </div>
+
+      <!-- Floating Tools Sudut Kanan Atas Viewport -->
+      <div class="viewport-floating-tools">
+        <button id="btn-xray-toggle" class="tool-fab" onclick="window.anatomyApp.toggleXRay()" title="Mode X-Ray Transparan">
+          ⚡
+        </button>
+        <button id="btn-fullscreen-toggle" class="tool-fab" onclick="toggleFullscreen()" title="Layar Penuh">
+          ⛶
+        </button>
+      </div>
+    </section>
+
+    <!-- PANEL KANAN: DETAIL TULANG TERPILIH -->
+    <aside class="right-panel">
+      <div class="detail-header">
+        <div class="detail-title-block">
+          <h2 id="detail-name-id" class="detail-title-id">Pilih Tulang</h2>
+          <div id="detail-name-latin" class="detail-title-latin">Klik salah satu tulang di model 3D</div>
+        </div>
+        <button id="speak-bone-btn" class="speak-btn" title="Dengarkan Pelafalan Nama Tulang">
+          🔊
+        </button>
+      </div>
+
+      <div class="detail-content">
+        <!-- Badges Metadata -->
+        <div class="meta-badges-row">
+          <span id="detail-count-badge" class="badge-tag highlight">0 Tulang</span>
+          <span id="detail-category-badge" class="badge-tag">Kategori</span>
+          <span id="detail-side-badge" class="badge-tag">Posisi</span>
+        </div>
+
+        <!-- Info Lokasi & Letak -->
+        <div class="info-card">
+          <div class="info-card-title">📍 Letak & Klasifikasi</div>
+          <div class="info-card-body">
+            <div><strong>Wilayah:</strong> <span id="detail-subcat">-</span></div>
+            <div><strong>Simetri:</strong> <span id="detail-side">-</span></div>
+          </div>
+        </div>
+
+        <!-- Fakta Menarik Pembelajaran -->
+        <div class="info-card fun-fact-card">
+          <div class="info-card-title">💡 Fakta Anatomi Menarik</div>
+          <div id="detail-funfact" class="info-card-body">
+            Pilih atau klik salah satu tulang untuk melihat fakta anatomi penting dan fungsinya.
+          </div>
+        </div>
+
+        <!-- Deskripsi & Peran Anatomis -->
+        <div class="info-card">
+          <div class="info-card-title">🩺 Struktur & Fungsi Biologis</div>
+          <div id="detail-description" class="info-card-body">
+            Sistem rangka manusia dewasa tersusun atas 206 tulang yang menyatu dan bersendi secara sempurna untuk menopang tubuh, melindungi organ dalam, dan memproduksi sel darah merah.
+          </div>
+        </div>
+
+        <button id="focus-camera-btn" class="focus-btn">
+          🔍 Fokuskan Kamera ke Tulang Ini
+        </button>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ==========================================
+       MODAL PILIHAN MODE KUIS
+       ========================================== -->
+  <div id="quiz-select-modal" class="modal-backdrop hidden">
+    <div class="quiz-card" style="width: 440px;">
+      <div class="quiz-header">
+        <div class="quiz-badge-title">🎯 Pilih Mode Kuis Anatomi</div>
+        <button class="icon-btn" onclick="closeQuizSelectModal()">✕</button>
+      </div>
+      <div class="quiz-body" style="gap: 14px;">
+        <p style="font-size: 13px; color: var(--text-secondary);">
+          Uji pemahaman Anda atau murid mengenai nama-nama 206 tulang manusia:
+        </p>
+
+        <button class="quiz-option-btn" onclick="launchQuiz('multiple_choice')">
+          <div class="opt-name-id">1. Pilihan Ganda (Tebak Nama)</div>
+          <div class="opt-name-latin">Sistem menyorot tulang di 3D, Anda memilih nama dwibahasa yang tepat.</div>
+        </button>
+
+        <button class="quiz-option-btn" onclick="launchQuiz('find_in_3d')">
+          <div class="opt-name-id">2. Tantangan 3D (Cari & Klik)</div>
+          <div class="opt-name-latin">Sistem menyebutkan nama tulang, Anda memutar dan mengklik tulang tersebut di 3D!</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL KUIS AKTIF & HASIL SKOR
+       ========================================== -->
+  <div id="quiz-modal" class="modal-backdrop hidden">
+    <div class="quiz-card">
+      <div class="quiz-header">
+        <div class="quiz-badge-title">
+          <span>🧠 KUIS ANATOMI TULANG</span>
+        </div>
+        <button class="icon-btn" onclick="window.skeletonQuiz.exitQuiz()" title="Tutup Kuis">✕</button>
+      </div>
+
+      <div class="quiz-progress-bar">
+        <div id="quiz-progress-fill" class="quiz-progress-fill"></div>
+      </div>
+
+      <!-- TAMPILAN SOAL KUIS AKTIF -->
+      <div id="quiz-active-view" class="quiz-body">
+        <div class="quiz-status-row">
+          <span id="quiz-q-number">Soal 1 dari 10</span>
+          <strong id="quiz-score-display">Skor: 0</strong>
+        </div>
+
+        <div id="quiz-question-title" class="quiz-question-title">
+          Apa nama tulang yang sedang disorot?
+        </div>
+
+        <div id="quiz-question-hint" class="quiz-question-hint">
+          Petunjuk: ...
+        </div>
+
+        <!-- Opsi Pilihan Ganda -->
+        <div id="quiz-options-container" class="quiz-options-container">
+          <!-- Tombol opsi pilihan ganda dihasilkan dinamis oleh quiz.js -->
+        </div>
+
+        <!-- Box Khusus Mode Cari & Klik di 3D -->
+        <div id="quiz-3d-notice" class="quiz-3d-notice-box hidden">
+          <p style="font-size: 13px; color: #94a3b8;">
+            Putar model 3D di layar, lalu <strong>KLIK LANGSUNG</strong> pada tulang:
+          </p>
+          <div id="quiz-target-badge" class="target-badge">Tulang Target</div>
+          <button class="hint-btn" onclick="window.skeletonQuiz.giveHint()">💡 Minta Petunjuk Lokasi</button>
+        </div>
+      </div>
+
+      <!-- TAMPILAN HASIL AKHIR KUIS -->
+      <div id="quiz-result-view" class="quiz-result-card hidden">
+        <div class="result-trophy">🏆</div>
+        <div class="result-score-title" id="quiz-final-score">100 / 100</div>
+        <div class="result-percent" id="quiz-final-percent">Persentase: 100%</div>
+        <div id="quiz-result-badge" class="result-badge">⭐⭐⭐⭐⭐ Dokter Ahli Rangka</div>
+
+        <div class="quiz-review-list" id="quiz-review-list">
+          <!-- Riwayat ulasan jawaban dihasilkan oleh quiz.js -->
+        </div>
+
+        <div class="result-actions">
+          <button class="primary-btn" onclick="window.skeletonQuiz.startQuiz(window.skeletonQuiz.quizType)">
+            Ulangi Kuis ↺
+          </button>
+          <button class="secondary-btn" onclick="window.skeletonQuiz.exitQuiz()">
+            Kembali ke Eksplorasi 📖
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL PANDUAN PENGGUNAAN
+       ========================================== -->
+  <div id="help-modal" class="modal-backdrop hidden">
+    <div class="help-modal-card">
+      <div class="help-modal-title">
+        <span>📖 Panduan Mengajar & Navigasi</span>
+      </div>
+      <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+        Aplikasi ini dirancang untuk memudahkan guru dan siswa mempelajari 206 tulang manusia secara visual dan interaktif 100% offline:
+      </p>
+
+      <div class="help-grid">
+        <div class="help-box">
+          <strong>🖱️ Memutar Model 3D</strong>
+          <p>Klik kiri mouse (atau 1 jari di layar sentuh) dan seret untuk memutar kerangka dari segala arah.</p>
+        </div>
+        <div class="help-box">
+          <strong>🔍 Zoom & Menggeser</strong>
+          <p>Gunakan roda mouse untuk zoom in/out. Klik kanan mouse dan seret untuk menggeser posisi kamera.</p>
+        </div>
+        <div class="help-box">
+          <strong>👆 Memilih Tulang</strong>
+          <p>Klik langsung bagian tulang pada gambar 3D, atau cari nama tulang pada daftar panel sebelah kiri.</p>
+        </div>
+        <div class="help-box">
+          <strong>🔊 Audio Pelafalan</strong>
+          <p>Klik tombol speaker (🔊) di panel kanan untuk mendengarkan cara mengucapkan nama Indonesia & Latin.</p>
+        </div>
+      </div>
+
+      <button class="primary-btn" style="margin-top: 10px;" onclick="closeHelpModal()">
+        Saya Mengerti, Mulai Belajar!
+      </button>
+    </div>
+  </div>
+
+  <!-- NOTIFIKASI TOAST MELAYANG -->
+  <div id="toast-notification" class="toast">Notifikasi</div>
+
+  <!-- ==========================================
+       SCRIPT LOKAL OFFLINE
+       ========================================== -->
+  <script src="assets/js/three.min.js"></script>
+  <script src="assets/js/OrbitControls.js"></script>
+  <script src="assets/js/GLTFLoader.js"></script>
+  <script src="assets/js/skeleton_data.js"></script>
+  <script src="assets/js/skeleton_model_data.js"></script>
+  <script src="assets/js/quiz.js"></script>
+  <script src="assets/js/app.js"></script>
+
+  <script>
+    // Fungsi UI Tambahan
+    function openQuizSelection() {
+      document.getElementById('quiz-select-modal').classList.remove('hidden');
+    }
+    function closeQuizSelectModal() {
+      document.getElementById('quiz-select-modal').classList.add('hidden');
+    }
+    function launchQuiz(type) {
+      closeQuizSelectModal();
+      window.skeletonQuiz.startQuiz(type);
+    }
+    function openHelpModal() {
+      document.getElementById('help-modal').classList.remove('hidden');
+    }
+    function closeHelpModal() {
+      document.getElementById('help-modal').classList.add('hidden');
+    }
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log(err));
+      } else {
+        document.exitFullscreen().catch(err => console.log(err));
+      }
+    }
+  </script>
+</body>
+</html>
